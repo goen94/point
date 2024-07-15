@@ -20,6 +20,7 @@ use App\Model\CloudStorage;
 use App\Model\HumanResource\Employee\Employee;
 use App\Model\Project\Project;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -62,7 +63,7 @@ class EmployeeAssessmentController extends Controller
             $kpis = $kpis->groupBy(DB::raw('year(kpis.date)'));
         }
 
-        $kpis = $kpis->where('employee_id', $employeeId)->orderBy('kpis.date', 'desc');
+        $kpis = $kpis->where('status', 'COMPLETED')->where('employee_id', $employeeId)->orderBy('kpis.date', 'desc');
 
         $kpis = pagination($kpis, 15);
 
