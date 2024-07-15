@@ -16,14 +16,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 // kpi reminder
 use App\Mail\KpiReminderEmail;
-use App\Model\CloudStorage;
 use App\Model\HumanResource\Employee\Employee;
-use App\Model\Project\Project;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class EmployeeAssessmentController extends Controller
 {
