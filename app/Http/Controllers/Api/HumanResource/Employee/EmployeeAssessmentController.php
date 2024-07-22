@@ -44,6 +44,9 @@ class EmployeeAssessmentController extends Controller
 
         if ($type === 'all') {
             $kpis = $kpis->groupBy('kpis.id');
+        } else {
+            //? except all, it will count only completed status on the KPI.
+            $kpis = $kpis->where('status', 'COMPLETED');
         }
         if ($type === 'daily') {
             $kpis = $kpis->groupBy('kpis.date');
@@ -52,7 +55,7 @@ class EmployeeAssessmentController extends Controller
             $kpis = $kpis->groupBy(DB::raw('yearweek(kpis.date)'));
         }
         if ($type === 'monthly') {
-            $kpis = $kpis->where('status', 'COMPLETED')->groupBy(DB::raw('year(kpis.date)'), DB::raw('month(kpis.date)'));
+            $kpis = $kpis->groupBy(DB::raw('year(kpis.date)'), DB::raw('month(kpis.date)'));
         }
         if ($type === 'yearly') {
             $kpis = $kpis->groupBy(DB::raw('year(kpis.date)'));
