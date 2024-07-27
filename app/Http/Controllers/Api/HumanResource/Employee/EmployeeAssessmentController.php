@@ -7,6 +7,8 @@ use App\Http\Resources\HumanResource\Kpi\Kpi\KpiCollection;
 use App\Http\Resources\HumanResource\Kpi\Kpi\KpiResource;
 use App\Http\Resources\HumanResource\Kpi\KpiGroup\KpiGroupResource;
 use App\Http\Resources\HumanResource\Kpi\KpiIndicator\KpiIndicatorResource;
+use App\Mail\KpiReminderEmail;
+use App\Model\HumanResource\Employee\Employee;
 use App\Model\HumanResource\Kpi\Automated;
 use App\Model\HumanResource\Kpi\Kpi;
 use App\Model\HumanResource\Kpi\KpiGroup;
@@ -14,15 +16,9 @@ use App\Model\HumanResource\Kpi\KpiIndicator;
 use App\Model\HumanResource\Kpi\KpiScore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-// kpi reminder
-use App\Mail\KpiReminderEmail;
-use App\Model\CloudStorage;
-use App\Model\HumanResource\Employee\Employee;
-use App\Model\Project\Project;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+
+// kpi reminder
 
 class EmployeeAssessmentController extends Controller
 {
@@ -48,6 +44,9 @@ class EmployeeAssessmentController extends Controller
 
         if ($type === 'all') {
             $kpis = $kpis->groupBy('kpis.id');
+        } else {
+            //? except all, it will count only completed status on the KPI.
+            $kpis = $kpis->where('status', 'COMPLETED');
         }
         if ($type === 'daily') {
             $kpis = $kpis->groupBy('kpis.date');
@@ -108,7 +107,7 @@ class EmployeeAssessmentController extends Controller
         $kpi->employee_id = $employeeId;
         $kpi->scorer_id = auth()->user()->id;
         $comment = '';
-        if (array_key_exists('comment',$template)) {
+        if (array_key_exists('comment', $template)) {
             $comment = $template['comment'];
         }
         $kpi->comment = $comment;
@@ -140,19 +139,19 @@ class EmployeeAssessmentController extends Controller
                     if (strlen($notes) > 4000) {
                         $notes = substr($notes, 0, 4001);
                     }
-                    $kpiIndicator->notes =  $notes;
+                    $kpiIndicator->notes = $notes;
                 } else {
                     $kpiIndicator->notes = '';
                 }
 
                 if (get_if_set($template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['comment'])) {
-                    $kpiIndicator->comment =  $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['comment'];
+                    $kpiIndicator->comment = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['comment'];
                 } else {
                     $kpiIndicator->comment = '';
                 }
 
                 if (get_if_set($template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['attachment'])) {
-                    $kpiIndicator->attachment =  $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['attachment'];
+                    $kpiIndicator->attachment = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['attachment'];
                 } else {
                     $kpiIndicator->attachment = '';
                 }
@@ -235,8 +234,8 @@ class EmployeeAssessmentController extends Controller
             ->where('kpis.id', $id)
             ->first();
 
-        $kpis->score = (float) $kpis->score;
-        $kpis->target = (float) $kpis->target;
+        $kpis->score = (float)$kpis->score;
+        $kpis->target = (float)$kpis->target;
 
         return new KpiResource($kpis);
     }
@@ -258,8 +257,8 @@ class EmployeeAssessmentController extends Controller
             ->whereDate('kpis.date', $date)
             ->first();
 
-        $kpis->score = (float) $kpis->score;
-        $kpis->target = (float) $kpis->target;
+        $kpis->score = (float)$kpis->score;
+        $kpis->target = (float)$kpis->target;
 
         return new KpiResource($kpis);
     }
@@ -444,19 +443,19 @@ class EmployeeAssessmentController extends Controller
                     if (strlen($notes) > 4000) {
                         $notes = substr($notes, 0, 4001);
                     }
-                    $kpiIndicator->notes =  $notes;
+                    $kpiIndicator->notes = $notes;
                 } else {
                     $kpiIndicator->notes = '';
                 }
 
                 if (get_if_set($template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['comment'])) {
-                    $kpiIndicator->comment =  $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['comment'];
+                    $kpiIndicator->comment = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['comment'];
                 } else {
                     $kpiIndicator->comment = '';
                 }
 
                 if (get_if_set($template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['attachment'])) {
-                    $kpiIndicator->attachment =  $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['attachment'];
+                    $kpiIndicator->attachment = $template['groups'][$groupIndex]['indicators'][$indicatorIndex]['selected']['attachment'];
                 } else {
                     $kpiIndicator->attachment = '';
                 }
@@ -497,7 +496,7 @@ class EmployeeAssessmentController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  int  $id
+     * @param int $id
      * @return KpiResource
      */
     public function destroy($employeeId, $id)
@@ -512,6 +511,7 @@ class EmployeeAssessmentController extends Controller
 
         return new KpiResource($kpi);
     }
+
     // kpi reminder
     public function kpiReminder(Request $request)
     {
