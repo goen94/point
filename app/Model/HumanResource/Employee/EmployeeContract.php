@@ -37,4 +37,14 @@ class EmployeeContract extends MasterModel
     {
         $this->attributes['contract_end'] = convert_to_server_timezone($value);
     }
+
+    public function getContractDueDateAttribute($value)
+    {
+        return convert_to_local_timezone($value);
+    }
+
+    public function setContractDueDateAttribute($value)
+    {
+        $this->attributes['contract_due_date'] = convert_to_server_timezone($value);
+    }
 }
