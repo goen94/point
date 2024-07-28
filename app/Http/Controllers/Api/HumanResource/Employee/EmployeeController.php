@@ -148,6 +148,7 @@ class EmployeeController extends Controller
             $employeeContract->employee_id = $employee->id;
             $employeeContract->contract_begin = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_begin']));
             $employeeContract->contract_end = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_end']));
+            $employeeContract->contract_due_date = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_due_date']));
             $employeeContract->link = '';
             $employeeContract->notes = $request->get('contracts')[$i]['notes'];
             $employeeContract->save();
@@ -168,6 +169,14 @@ class EmployeeController extends Controller
             foreach ($request->get('scorers') as $scorer) {
                 if (!$employee->scorers->contains($scorer['id'])) {
                     $employee->scorers()->attach($scorer['id']);
+                }
+            }
+        }
+
+        if ($request->has('reviewers')) {
+            foreach ($request->get('reviewers') as $reviewer) {
+                if (!$employee->reviewers->contains($reviewer['id'])) {
+                    $employee->reviewers()->attach($reviewer['id']);
                 }
             }
         }
@@ -203,7 +212,8 @@ class EmployeeController extends Controller
             ->with('phones')
             ->with('status')
             ->with('jobLocation')
-            ->with('user');
+            ->with('user')
+            ->with('reviewers');
 
         $employee = Employee::joins($employee, $request->get('join'));
 

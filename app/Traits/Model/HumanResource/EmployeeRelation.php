@@ -166,4 +166,12 @@ trait EmployeeRelation
         return $this->belongsTo(Branch::class);
     }
 
+    /**
+     * The reviewers that belong to the employee.
+     */
+    public function reviewers()
+    {
+        return $this->belongsToMany('App\Model\Master\User', 'employee_reviewer', 'employee_id', 'user_id');
+    }
+
 }
