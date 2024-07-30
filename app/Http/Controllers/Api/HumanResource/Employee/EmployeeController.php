@@ -49,6 +49,7 @@ class EmployeeController extends Controller
             ->with('phones')
             ->with('status')
             ->with('jobLocation')
+            ->with('status')
             ->with('user');
 
         $employees = Employee::joins($employees, $request->get('join'));
