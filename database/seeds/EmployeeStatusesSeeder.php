@@ -18,6 +18,7 @@ class EmployeeStatusesSeeder extends Seeder
 
             if (!$check_status) {
                 DB::connection('tenant')->table('employee_statuses')->insert([
+                    'id' => $i + 1,
                     'name' => $status[$i],
                     'created_by' => 1,
                     'updated_by' => 1,

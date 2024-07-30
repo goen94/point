@@ -8,6 +8,8 @@ use App\Http\Requests\HumanResource\Employee\Employee\StoreEmployeeRequest;
 use App\Http\Requests\HumanResource\Employee\Employee\UpdateEmployeeRequest;
 use App\Http\Resources\ApiCollection;
 use App\Http\Resources\ApiResource;
+use App\Mail\DueDateReminderContractEmail;
+use App\Mail\KpiReminderEmail;
 use App\Model\CloudStorage;
 use App\Model\HumanResource\Employee\Employee;
 use App\Model\HumanResource\Employee\EmployeeCompanyEmail;
@@ -22,6 +24,7 @@ use App\Model\Master\Phone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class EmployeeController extends Controller
 {
@@ -53,7 +56,7 @@ class EmployeeController extends Controller
             ->with('user');
 
         $employees = Employee::joins($employees, $request->get('join'));
-        
+
         if ($request->get('scorer_id')) {
             $employees = $employees->whereHas('scorers', function ($q) use ($request) {
                 $q->where('user_id', '=', $request->get('scorer_id'))
@@ -191,7 +194,7 @@ class EmployeeController extends Controller
      * Display the specified resource.
      *
      * @param Request $request
-     * @param  int                     $id
+     * @param int $id
      * @return ApiResource
      */
     public function show(Request $request, $id)
@@ -227,7 +230,7 @@ class EmployeeController extends Controller
      * Update the specified resource in storage.
      *
      * @param \App\Http\Requests\HumanResource\Employee\Employee\UpdateEmployeeRequest $request
-     * @param  int $id
+     * @param int $id
      * @return ApiResource
      */
     public function update(UpdateEmployeeRequest $request, $id)
@@ -448,5 +451,34 @@ class EmployeeController extends Controller
         }
 
         return response()->json([], 200);
+    }
+
+    /**
+     * Due date contract reminder
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function dueDateContractReminder(Request $request)
+    {
+
+        $reviewer_id = $request->get('reviewer_id');
+        $employee_id = $request->get('employee_id');
+        $employee = Employee::findOrFail($employee_id);
+        $reviewer = Employee::findOrFail($reviewer_id);
+        $contract = EmployeeContract::where('employee_id', $employee_id)->orderBy('updated_at', 'desc')->first();
+
+        if (!$contract) {
+            return response()->json(['message' => 'No contract due date today'], 200);
+        }
+
+        if ($reviewer->email) {
+            Mail::to($reviewer->email)->send(new DueDateReminderContractEmail(
+                $employee,
+                $reviewer,
+                $contract
+            ));
+        }
+
+        return response()->json(['message' => "Reminder contract e-mail of $employee->name has been sent to $reviewer->name."], 200);
     }
 }
