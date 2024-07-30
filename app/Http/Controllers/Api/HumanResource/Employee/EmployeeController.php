@@ -257,7 +257,15 @@ class EmployeeController extends Controller
         $employee->bpjs = $request->get('bpjs');
         $employee->resign_date = $request->get('resign_date') ? date('Y-m-d', strtotime($request->get('resign_date'))) : null;
 
-        $employee->save();
+        if ($request->get('employee_status_id') == 2 || $request->get('employee_status_id') == 4) {
+            $employee->archived_at = now();
+            $employee->archived_by = auth()->user()->id;
+            $employee->reason_ended_contract = $request->get('reason_ended_contract') ?? null;
+        } else {
+            $employee->archived_at = null;
+            $employee->archived_by = null;
+            $employee->reason_ended_contract = null;
+        }
 
         Address::saveFromRelation($employee, $request->get('addresses'));
         Phone::saveFromRelation($employee, $request->get('phones'));
@@ -315,11 +323,13 @@ class EmployeeController extends Controller
                 if (isset($request->get('contracts')[$i]['id'])) {
                     $employeeContract = EmployeeContract::findOrFail($request->get('contracts')[$i]['id']);
                 } else {
+                    $employee->employee_status_id = 3; //? set to on going contract based on PRD
                     $employeeContract = new EmployeeContract;
                     $employeeContract->employee_id = $employee->id;
                 }
                 $employeeContract->contract_begin = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_begin']));
                 $employeeContract->contract_end = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_end']));
+                $employeeContract->contract_due_date = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_due_date']));
                 $employeeContract->link = '';
                 $employeeContract->notes = $request->get('contracts')[$i]['notes'];
                 $employeeContract->save();
@@ -336,6 +346,8 @@ class EmployeeController extends Controller
                 }
             }
         }
+
+        $employee->save();
 
         DB::connection('tenant')->commit();
 
