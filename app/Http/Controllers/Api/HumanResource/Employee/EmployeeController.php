@@ -64,10 +64,8 @@ class EmployeeController extends Controller
             });
         }
 
-        if ($request->get('is_archived')) {
-            $employees = $employees->whereNotNull('archived_at');
-        } else {
-            $employees = $employees->whereNull('archived_at');
+        if ($request->get('status')) {
+            $employees = $employees->where('employee_status_id', $request->get('status'));
         }
 
         $employees = pagination($employees, $request->get('limit'));
