@@ -21,6 +21,7 @@ use App\Model\HumanResource\Employee\EmployeeSocialMedia;
 use App\Model\Master\Address;
 use App\Model\Master\Email;
 use App\Model\Master\Phone;
+use App\Model\Master\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -464,7 +465,7 @@ class EmployeeController extends Controller
         $reviewer_id = $request->get('reviewer_id');
         $employee_id = $request->get('employee_id');
         $employee = Employee::findOrFail($employee_id);
-        $reviewer = Employee::findOrFail($reviewer_id);
+        $reviewer = User::findOrFail($reviewer_id);
         $contract = EmployeeContract::where('employee_id', $employee_id)->orderBy('updated_at', 'desc')->first();
 
         if (!$contract) {

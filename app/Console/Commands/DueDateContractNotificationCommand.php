@@ -6,6 +6,7 @@ use App\Mail\DueDateReminderContractEmail;
 use App\Model\HumanResource\Employee\Employee;
 use App\Model\HumanResource\Employee\EmployeeContract;
 use App\Model\HumanResource\Employee\EmployeeReviewer;
+use App\Model\Master\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -44,8 +45,8 @@ class DueDateContractNotificationCommand extends Command
      */
     public function handle()
     {
-        $startOfDay = convert_to_server_timezone(now()->startOfDay()->add(-1, 'day'));
-        $endOfDay = convert_to_server_timezone(now()->endOfDay()->add(-1, 'day'));
+        $startOfDay = Carbon::now()->setTimezone('Asia/Jakarta')->startOfDay();
+        $endOfDay = Carbon::now()->setTimezone('Asia/Jakarta')->endOfDay();
 
         $contract_reminders = EmployeeContract::whereBetween('contract_due_date', [$startOfDay, $endOfDay])->get();
 
@@ -63,7 +64,7 @@ class DueDateContractNotificationCommand extends Command
             }
 
             foreach ($reviewers as $reviewer) {
-                $reviewer = Employee::find($reviewer->user_id);
+                $reviewer = User::find($reviewer->user_id);
                 if ($reviewer->email) {
                     Mail::to($reviewer->email)->send(new DueDateReminderContractEmail(
                         $employee,
