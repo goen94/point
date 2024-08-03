@@ -113,6 +113,7 @@ class EmployeeController extends Controller
         $employee->tax_identification_number = $request->get('tax_identification_number');
         $employee->bpjs = $request->get('bpjs');
         $employee->resign_date = $request->get('resign_date') ? date('Y-m-d', strtotime($request->get('resign_date'))) : null;
+        $employee->due_date_callback_url = $request->get('due_date_callback_url') ?? null;
 
         $employee->save();
 
@@ -258,6 +259,7 @@ class EmployeeController extends Controller
         $employee->tax_identification_number = $request->get('tax_identification_number');
         $employee->bpjs = $request->get('bpjs');
         $employee->resign_date = $request->get('resign_date') ? date('Y-m-d', strtotime($request->get('resign_date'))) : null;
+        $employee->due_date_callback_url = $request->get('due_date_callback_url') ?? $employee->due_date_callback_url;
 
         if ($request->get('employee_status_id') == 2 || $request->get('employee_status_id') == 4) {
             $employee->archived_at = now();
