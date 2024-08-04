@@ -48,6 +48,8 @@ class DueDateContractNotificationCommand extends Command
         $startOfDay = Carbon::now()->setTimezone('Asia/Jakarta')->startOfDay();
         $endOfDay = Carbon::now()->setTimezone('Asia/Jakarta')->endOfDay();
 
+        $this->info('Current time: ' . $startOfDay);
+
         $contract_reminders = EmployeeContract::whereBetween('contract_due_date', [$startOfDay, $endOfDay])->get();
 
         if ($contract_reminders->isEmpty()) {

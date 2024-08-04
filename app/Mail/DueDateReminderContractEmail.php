@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 
 class DueDateReminderContractEmail extends Mailable
@@ -48,7 +49,7 @@ class DueDateReminderContractEmail extends Mailable
                 [
                     'employeeName' => $this->employee->name,
                     'reviewerName' => $this->reviewer->name,
-                    'contractExpired' => convert_to_local_timezone($this->contract->contract_end),
+                    'contractExpired' => Carbon::parse(convert_to_local_timezone($this->contract->contract_end))->format('F d, Y'),
                     'callbackUrl' => $callbackUrl,
                 ]);
     }
