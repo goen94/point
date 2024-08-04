@@ -27,6 +27,7 @@ class MasterModel extends PointModel
     {
         $this->archived_at = Carbon::now();
         $this->archived_by = optional(auth()->user())->id;
+        $this->employee_status_id = 2;
         $this->save();
     }
 
@@ -34,6 +35,7 @@ class MasterModel extends PointModel
     {
         $this->archived_at = null;
         $this->archived_by = null;
+        $this->employee_status_id = 1;
         $this->save();
     }
 

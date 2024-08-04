@@ -67,12 +67,12 @@ class EmployeeController extends Controller
 
         $status = $request->get('status');
         if ($status) {
-            $employees = $employees->where('employee_status_id', $status);
-            if ($status == 2) {
-                $employees = $employees->whereNotNull('archived_at');
-            } else {
-                $employees = $employees->whereNull('archived_at');
-            }
+            $employees = $employees->where('employee_status_id', $status)
+                ->when($status == 2, function($query) {
+                    $query->whereNotNull('archived_at');
+                }, function($query) {
+                    $query->whereNull('archived_at');
+                });
         } else {
             $employees = $employees->whereNull('archived_at');
         }
