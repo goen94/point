@@ -9,12 +9,12 @@ use App\Http\Requests\HumanResource\Employee\Employee\UpdateEmployeeRequest;
 use App\Http\Resources\ApiCollection;
 use App\Http\Resources\ApiResource;
 use App\Mail\DueDateReminderContractEmail;
-use App\Mail\KpiReminderEmail;
 use App\Model\CloudStorage;
 use App\Model\HumanResource\Employee\Employee;
 use App\Model\HumanResource\Employee\EmployeeCompanyEmail;
 use App\Model\HumanResource\Employee\EmployeeContract;
 use App\Model\HumanResource\Employee\EmployeeGroup;
+use App\Model\HumanResource\Employee\EmployeeReviewer;
 use App\Model\HumanResource\Employee\EmployeeSalaryHistory;
 use App\Model\HumanResource\Employee\EmployeeScorer;
 use App\Model\HumanResource\Employee\EmployeeSocialMedia;
@@ -68,9 +68,9 @@ class EmployeeController extends Controller
         $status = $request->get('status');
         if ($status) {
             $employees = $employees->where('employee_status_id', $status)
-                ->when($status == 2, function($query) {
+                ->when($status == 2, function ($query) {
                     $query->whereNotNull('archived_at');
-                }, function($query) {
+                }, function ($query) {
                     $query->whereNull('archived_at');
                 });
         } else {
@@ -123,6 +123,16 @@ class EmployeeController extends Controller
         $employee->bpjs = $request->get('bpjs');
         $employee->resign_date = $request->get('resign_date') ? date('Y-m-d', strtotime($request->get('resign_date'))) : null;
         $employee->due_date_callback_url = $request->get('due_date_callback_url') ?? null;
+
+        if ($request->get('employee_status_id') == 2) {
+            $employee->archived_at = now();
+            $employee->archived_by = auth()->user()->id;
+            $employee->reason_ended_contract = $request->get('reason_ended_contract') ?? null;
+        } else {
+            $employee->archived_at = null;
+            $employee->archived_by = null;
+            $employee->reason_ended_contract = null;
+        }
 
         $employee->save();
 
@@ -270,7 +280,7 @@ class EmployeeController extends Controller
         $employee->resign_date = $request->get('resign_date') ? date('Y-m-d', strtotime($request->get('resign_date'))) : null;
         $employee->due_date_callback_url = $request->get('due_date_callback_url') ?? $employee->due_date_callback_url;
 
-        if ($request->get('employee_status_id') == 2 || $request->get('employee_status_id') == 4) {
+        if ($request->get('employee_status_id') == 2) {
             $employee->archived_at = now();
             $employee->archived_by = auth()->user()->id;
             $employee->reason_ended_contract = $request->get('reason_ended_contract') ?? null;
@@ -336,7 +346,7 @@ class EmployeeController extends Controller
                 if (isset($request->get('contracts')[$i]['id'])) {
                     $employeeContract = EmployeeContract::findOrFail($request->get('contracts')[$i]['id']);
                 } else {
-                    $employee->employee_status_id = 3; //? set to on going contract based on PRD
+                    $employee->employee_status_id = 1;
                     $employeeContract = new EmployeeContract;
                     $employeeContract->employee_id = $employee->id;
                 }
@@ -356,6 +366,18 @@ class EmployeeController extends Controller
             foreach ($scorers as $scorer) {
                 if (!$employee->scorers->contains($scorer['id'])) {
                     $employee->scorers()->attach($scorer['id']);
+                }
+            }
+        }
+
+        if ($request->has('reviewers')) {
+            $reviewers = $request->get('reviewers');
+            $deleted = array_column($reviewers, 'id');
+            EmployeeReviewer::where('employee_id', $employee->id)->whereNotIn('user_id', $deleted)->delete();
+
+            foreach ($reviewers as $reviewer) {
+                if (!$employee->reviewers->contains($reviewer['id'])) {
+                    $employee->reviewers()->attach($reviewer['id']);
                 }
             }
         }
@@ -403,20 +425,6 @@ class EmployeeController extends Controller
     /**
      * Archive the specified resource from storage.
      *
-     * @param int $id
-     * @return ApiResource
-     */
-    public function archive($id)
-    {
-        $employee = Employee::findOrFail($id);
-        $employee->archive();
-
-        return new ApiResource($employee);
-    }
-
-    /**
-     * Archive the specified resource from storage.
-     *
      * @param Request $request
      * @return JsonResponse
      */
@@ -432,15 +440,15 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Activate the specified resource from storage.
+     * Archive the specified resource from storage.
      *
      * @param int $id
      * @return ApiResource
      */
-    public function activate($id)
+    public function archive($id)
     {
         $employee = Employee::findOrFail($id);
-        $employee->activate();
+        $employee->archive();
 
         return new ApiResource($employee);
     }
@@ -460,6 +468,20 @@ class EmployeeController extends Controller
         }
 
         return response()->json([], 200);
+    }
+
+    /**
+     * Activate the specified resource from storage.
+     *
+     * @param int $id
+     * @return ApiResource
+     */
+    public function activate($id)
+    {
+        $employee = Employee::findOrFail($id);
+        $employee->activate();
+
+        return new ApiResource($employee);
     }
 
     /**
