@@ -50,9 +50,6 @@ class AlterData extends Command
     {
         $projects = Project::where('is_generated', true)->get();
         foreach ($projects as $project) {
-            if ($project->code != 'dev') {
-                continue;    
-            }
             $this->line('Clone '.$project->code);
             Artisan::call('tenant:database:backup-clone', ['project_code' => strtolower($project->code)]);
 
