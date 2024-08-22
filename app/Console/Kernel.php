@@ -29,6 +29,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('db:backup-all 7')->daily();
         $schedule->command('db:backup-all 360')->monthly();
         $schedule->command('telescope:prune --hours=72')->daily();
+        $schedule->command('notification:due-date-contract')->dailyAt('00:00');
     }
 
     /**

@@ -8,20 +8,24 @@ use App\Http\Requests\HumanResource\Employee\Employee\StoreEmployeeRequest;
 use App\Http\Requests\HumanResource\Employee\Employee\UpdateEmployeeRequest;
 use App\Http\Resources\ApiCollection;
 use App\Http\Resources\ApiResource;
+use App\Mail\DueDateReminderContractEmail;
 use App\Model\CloudStorage;
 use App\Model\HumanResource\Employee\Employee;
 use App\Model\HumanResource\Employee\EmployeeCompanyEmail;
 use App\Model\HumanResource\Employee\EmployeeContract;
 use App\Model\HumanResource\Employee\EmployeeGroup;
+use App\Model\HumanResource\Employee\EmployeeReviewer;
 use App\Model\HumanResource\Employee\EmployeeSalaryHistory;
 use App\Model\HumanResource\Employee\EmployeeScorer;
 use App\Model\HumanResource\Employee\EmployeeSocialMedia;
 use App\Model\Master\Address;
 use App\Model\Master\Email;
 use App\Model\Master\Phone;
+use App\Model\Master\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class EmployeeController extends Controller
 {
@@ -49,10 +53,11 @@ class EmployeeController extends Controller
             ->with('phones')
             ->with('status')
             ->with('jobLocation')
+            ->with('status')
             ->with('user');
 
         $employees = Employee::joins($employees, $request->get('join'));
-        
+
         if ($request->get('scorer_id')) {
             $employees = $employees->whereHas('scorers', function ($q) use ($request) {
                 $q->where('user_id', '=', $request->get('scorer_id'))
@@ -60,8 +65,14 @@ class EmployeeController extends Controller
             });
         }
 
-        if ($request->get('is_archived')) {
-            $employees = $employees->whereNotNull('archived_at');
+        $status = $request->get('status');
+        if ($status) {
+            $employees = $employees->where('employee_status_id', $status)
+                ->when($status == 2, function ($query) {
+                    $query->whereNotNull('archived_at');
+                }, function ($query) {
+                    $query->whereNull('archived_at');
+                });
         } else {
             $employees = $employees->whereNull('archived_at');
         }
@@ -111,6 +122,17 @@ class EmployeeController extends Controller
         $employee->tax_identification_number = $request->get('tax_identification_number');
         $employee->bpjs = $request->get('bpjs');
         $employee->resign_date = $request->get('resign_date') ? date('Y-m-d', strtotime($request->get('resign_date'))) : null;
+        $employee->due_date_callback_url = $request->get('due_date_callback_url') ?? null;
+
+        if ($request->get('employee_status_id') == 2) {
+            $employee->archived_at = now();
+            $employee->archived_by = auth()->user()->id;
+            $employee->reason_ended_contract = $request->get('reason_ended_contract') ?? null;
+        } else {
+            $employee->archived_at = null;
+            $employee->archived_by = null;
+            $employee->reason_ended_contract = null;
+        }
 
         $employee->save();
 
@@ -148,6 +170,7 @@ class EmployeeController extends Controller
             $employeeContract->employee_id = $employee->id;
             $employeeContract->contract_begin = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_begin']));
             $employeeContract->contract_end = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_end']));
+            $employeeContract->contract_due_date = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_due_date']));
             $employeeContract->link = '';
             $employeeContract->notes = $request->get('contracts')[$i]['notes'];
             $employeeContract->save();
@@ -172,6 +195,14 @@ class EmployeeController extends Controller
             }
         }
 
+        if ($request->has('reviewers')) {
+            foreach ($request->get('reviewers') as $reviewer) {
+                if (!$employee->reviewers->contains($reviewer['id'])) {
+                    $employee->reviewers()->attach($reviewer['id']);
+                }
+            }
+        }
+
         DB::connection('tenant')->commit();
 
         return new ApiResource($employee);
@@ -181,7 +212,7 @@ class EmployeeController extends Controller
      * Display the specified resource.
      *
      * @param Request $request
-     * @param  int                     $id
+     * @param int $id
      * @return ApiResource
      */
     public function show(Request $request, $id)
@@ -203,7 +234,8 @@ class EmployeeController extends Controller
             ->with('phones')
             ->with('status')
             ->with('jobLocation')
-            ->with('user');
+            ->with('user')
+            ->with('reviewers');
 
         $employee = Employee::joins($employee, $request->get('join'));
 
@@ -216,7 +248,7 @@ class EmployeeController extends Controller
      * Update the specified resource in storage.
      *
      * @param \App\Http\Requests\HumanResource\Employee\Employee\UpdateEmployeeRequest $request
-     * @param  int $id
+     * @param int $id
      * @return ApiResource
      */
     public function update(UpdateEmployeeRequest $request, $id)
@@ -246,8 +278,17 @@ class EmployeeController extends Controller
         $employee->tax_identification_number = $request->get('tax_identification_number');
         $employee->bpjs = $request->get('bpjs');
         $employee->resign_date = $request->get('resign_date') ? date('Y-m-d', strtotime($request->get('resign_date'))) : null;
+        $employee->due_date_callback_url = $request->get('due_date_callback_url') ?? $employee->due_date_callback_url;
 
-        $employee->save();
+        if ($request->get('employee_status_id') == 2) {
+            $employee->archived_at = now();
+            $employee->archived_by = auth()->user()->id;
+            $employee->reason_ended_contract = $request->get('reason_ended_contract') ?? null;
+        } else {
+            $employee->archived_at = null;
+            $employee->archived_by = null;
+            $employee->reason_ended_contract = null;
+        }
 
         Address::saveFromRelation($employee, $request->get('addresses'));
         Phone::saveFromRelation($employee, $request->get('phones'));
@@ -305,11 +346,13 @@ class EmployeeController extends Controller
                 if (isset($request->get('contracts')[$i]['id'])) {
                     $employeeContract = EmployeeContract::findOrFail($request->get('contracts')[$i]['id']);
                 } else {
+                    $employee->employee_status_id = 1;
                     $employeeContract = new EmployeeContract;
                     $employeeContract->employee_id = $employee->id;
                 }
                 $employeeContract->contract_begin = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_begin']));
                 $employeeContract->contract_end = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_end']));
+                $employeeContract->contract_due_date = date('Y-m-d', strtotime($request->get('contracts')[$i]['contract_due_date']));
                 $employeeContract->link = '';
                 $employeeContract->notes = $request->get('contracts')[$i]['notes'];
                 $employeeContract->save();
@@ -326,6 +369,20 @@ class EmployeeController extends Controller
                 }
             }
         }
+
+        if ($request->has('reviewers')) {
+            $reviewers = $request->get('reviewers');
+            $deleted = array_column($reviewers, 'id');
+            EmployeeReviewer::where('employee_id', $employee->id)->whereNotIn('user_id', $deleted)->delete();
+
+            foreach ($reviewers as $reviewer) {
+                if (!$employee->reviewers->contains($reviewer['id'])) {
+                    $employee->reviewers()->attach($reviewer['id']);
+                }
+            }
+        }
+
+        $employee->save();
 
         DB::connection('tenant')->commit();
 
@@ -368,6 +425,23 @@ class EmployeeController extends Controller
     /**
      * Archive the specified resource from storage.
      *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function bulkArchive(Request $request)
+    {
+        $employees = $request->get('employees');
+        foreach ($employees as $employee) {
+            $employee = Employee::findOrFail($employee['id']);
+            $employee->archive();
+        }
+
+        return response()->json([], 200);
+    }
+
+    /**
+     * Archive the specified resource from storage.
+     *
      * @param int $id
      * @return ApiResource
      */
@@ -385,12 +459,12 @@ class EmployeeController extends Controller
      * @param Request $request
      * @return JsonResponse
      */
-    public function bulkArchive(Request $request)
+    public function bulkActivate(Request $request)
     {
         $employees = $request->get('employees');
         foreach ($employees as $employee) {
             $employee = Employee::findOrFail($employee['id']);
-            $employee->archive();
+            $employee->activate();
         }
 
         return response()->json([], 200);
@@ -411,19 +485,31 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Archive the specified resource from storage.
-     *
+     * Due date contract reminder
      * @param Request $request
      * @return JsonResponse
      */
-    public function bulkActivate(Request $request)
+    public function dueDateContractReminder(Request $request)
     {
-        $employees = $request->get('employees');
-        foreach ($employees as $employee) {
-            $employee = Employee::findOrFail($employee['id']);
-            $employee->activate();
+
+        $reviewer_id = $request->get('reviewer_id');
+        $employee_id = $request->get('employee_id');
+        $employee = Employee::findOrFail($employee_id);
+        $reviewer = User::findOrFail($reviewer_id);
+        $contract = EmployeeContract::where('employee_id', $employee_id)->orderBy('updated_at', 'desc')->first();
+
+        if (!$contract) {
+            return response()->json(['message' => 'No contract due date today'], 200);
         }
 
-        return response()->json([], 200);
+        if ($reviewer->email) {
+            Mail::to($reviewer->email)->send(new DueDateReminderContractEmail(
+                $employee,
+                $reviewer,
+                $contract
+            ));
+        }
+
+        return response()->json(['message' => "Reminder contract e-mail of $employee->name has been sent to $reviewer->name."], 200);
     }
 }

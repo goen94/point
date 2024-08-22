@@ -57,5 +57,6 @@ Route::prefix('human-resource')->namespace('HumanResource')->group(function () {
         Route::post('employees/{employee_id}/salary/export', 'EmployeeSalaryExportController@export');
         // send email
         Route::post('employees/kpi-reminder', 'EmployeeAssessmentController@kpiReminder');
+        Route::post('reminders/contract', 'EmployeeController@dueDateContractReminder');
     });
 });
