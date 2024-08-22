@@ -50,6 +50,9 @@ class AlterData extends Command
     {
         $projects = Project::where('is_generated', true)->get();
         foreach ($projects as $project) {
+            if ($project->code != 'dev') {
+                continue;    
+            }
             $this->line('Clone '.$project->code);
             Artisan::call('tenant:database:backup-clone', ['project_code' => strtolower($project->code)]);
 
@@ -59,15 +62,10 @@ class AlterData extends Command
             DB::connection('tenant')->reconnect();
             DB::connection('tenant')->beginTransaction();
 
-            $permission = new Permission;
-            $permission->name = "menu setting";
-            $permission->guard_name = "api";
-            $permission->save();
-            
-            $permission = new Permission;
-            $permission->name = "update setting";
-            $permission->guard_name = "api";
-            $permission->save();
+            DB::connection('tenant')->table('employee_statuses')->insert([
+                ['name' => 'ON GOING CONTRACT'],
+                ['name' => 'END CONTRACT'],
+            ]);
 
             DB::connection('tenant')->commit();
         }
