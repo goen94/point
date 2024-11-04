@@ -6,6 +6,7 @@ use App\Model\Auth\Permission;
 use App\Model\Form;
 use App\Model\Inventory\Inventory;
 use App\Model\Master\Warehouse;
+use App\Model\HumanResource\Employee;
 use App\Model\Project\Project;
 use App\Model\Purchase\PurchaseInvoice\PurchaseInvoice;
 use App\Model\Purchase\PurchaseInvoice\PurchaseInvoiceItem;
@@ -59,10 +60,14 @@ class AlterData extends Command
             DB::connection('tenant')->reconnect();
             DB::connection('tenant')->beginTransaction();
 
-            DB::connection('tenant')->table('employee_statuses')->insert([
-                ['name' => 'ON GOING CONTRACT'],
-                ['name' => 'END CONTRACT'],
-            ]);
+            $employees = Employee::whereNotNull('archived_at')->get();
+
+            foreach($employees as $employee) {
+                $employee->archived_at = null;
+                $employee->archived_by = null;
+                $employee->employee_status_id = 2;
+                $employee->save();
+            }
 
             DB::connection('tenant')->commit();
         }
