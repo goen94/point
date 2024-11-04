@@ -6,7 +6,7 @@ use App\Model\Auth\Permission;
 use App\Model\Form;
 use App\Model\Inventory\Inventory;
 use App\Model\Master\Warehouse;
-use App\Model\HumanResource\Employee;
+use App\Model\HumanResource\Employee\Employee;
 use App\Model\Project\Project;
 use App\Model\Purchase\PurchaseInvoice\PurchaseInvoice;
 use App\Model\Purchase\PurchaseInvoice\PurchaseInvoiceItem;
