@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Model\Project\Project;
 use Illuminate\Http\Response;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\LoginNotificationEmail;
 
 class LoginController extends Controller
 {
@@ -82,6 +85,11 @@ class LoginController extends Controller
                 }
             }
         }
+
+        Mail::to($user->name)->send(new LoginNotificationEmail(
+            "https://cloud.point.red/auth/forgot-password",
+            $user->name,
+        ));
 
         return response()->json([
             'data' => $response,
