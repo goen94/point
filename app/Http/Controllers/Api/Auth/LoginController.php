@@ -86,7 +86,7 @@ class LoginController extends Controller
             }
         }
 
-        Mail::to($user->name)->send(new LoginNotificationEmail(
+        Mail::to($user->email)->send(new LoginNotificationEmail(
             "https://cloud.point.red/auth/forgot-password",
             $user->name,
         ));
