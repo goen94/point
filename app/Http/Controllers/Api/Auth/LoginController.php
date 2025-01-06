@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Model\Project\Project;
 use Illuminate\Http\Response;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\LoginNotificationEmail;
 
@@ -86,11 +87,21 @@ class LoginController extends Controller
             }
         }
 
-        Mail::to($user->email)->send(new LoginNotificationEmail(
-            "https://cloud.point.red/auth/forgot-password",
-            $user->name,
-        ));
+        $users = DB::connection('tenant')->table('oauth_access_tokens')
+            ->where('user_id', $user->id)
+            ->where('mobile_vendor', $tokenResult->token->mobile_vendor)
+            ->where('mobile_model', $tokenResult->token->mobile_model)
+            ->get();
 
+        if ($users->count() == 0) {
+            Mail::to($user->email)->send(new LoginNotificationEmail(
+                "https://cloud.point.red/auth/forgot-password",
+                $user->name,
+                $tokenResult->token->mobile_vendor,
+                $tokenResult->token->mobile_model,
+            ));
+        }
+        
         return response()->json([
             'data' => $response,
         ]);

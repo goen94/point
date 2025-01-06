@@ -8,6 +8,11 @@
         <br><br>
         We've detected a login to your account from a device we don't recognize.
         <br>
+        Login Details:
+        <br>
+        - Device Vendor: {{ $device }}
+        - Device Model: {{ $model }}
+        <br>
         If this was you, no action is needed.
         <br>
         If you didn't authorize this login, please secure your account immediately by following these steps: 
