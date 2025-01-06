@@ -87,7 +87,7 @@ class LoginController extends Controller
             }
         }
 
-        $users = DB::connection('tenant')->table('oauth_access_tokens')
+        $users = DB::connection('mysql')->table('oauth_access_tokens')
             ->where('user_id', $user->id)
             ->where('mobile_vendor', $tokenResult->token->mobile_vendor)
             ->where('mobile_model', $tokenResult->token->mobile_model)
