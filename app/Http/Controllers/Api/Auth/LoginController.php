@@ -87,19 +87,28 @@ class LoginController extends Controller
             }
         }
 
-        $users = DB::connection('mysql')->table('oauth_access_tokens')
+        if ($tokenResult->token->mobile_vendor == 'none' || $tokenResult->token->mobile_vendor == null) {
+            $users = DB::connection('mysql')->table('oauth_access_tokens')
+            ->where('user_id', $user->id)
+            ->where('os_name', $tokenResult->token->os_name)
+            ->where('os_version', $tokenResult->token->os_version)
+            ->get();
+        } else {
+            $users = DB::connection('mysql')->table('oauth_access_tokens')
             ->where('user_id', $user->id)
             ->where('mobile_vendor', $tokenResult->token->mobile_vendor)
             ->where('mobile_model', $tokenResult->token->mobile_model)
             ->get();
+        }
+        
 
         \Log::info('v: ' . $tokenResult->token->mobile_vendor . 'm: ' . $tokenResult->token->mobile_model . 'u: ' . $user->id. ' = '.$users->count());
         if ($users->count() == 0) {
             Mail::to($user->email)->send(new LoginNotificationEmail(
                 "https://cloud.point.red/auth/forgot-password",
                 $user->name,
-                $tokenResult->token->mobile_vendor,
-                $tokenResult->token->mobile_model,
+                $tokenResult->token->mobile_vendor != 'none' ? $tokenResult->token->mobile_vendor : $tokenResult->token->os_name,
+                $tokenResult->token->mobile_model  != 'none' ? $tokenResult->token->mobile_model : $tokenResult->token->os_version,
             ));
         }
         
