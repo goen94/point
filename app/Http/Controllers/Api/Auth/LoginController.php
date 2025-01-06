@@ -103,7 +103,7 @@ class LoginController extends Controller
         
 
         \Log::info('v: ' . $tokenResult->token->mobile_vendor . 'm: ' . $tokenResult->token->mobile_model . 'u: ' . $user->id. ' = '.$users->count());
-        if ($users->count() == 0) {
+        if ($users->count() > 1) {
             Mail::to($user->email)->send(new LoginNotificationEmail(
                 "https://cloud.point.red/auth/forgot-password",
                 $user->name,
