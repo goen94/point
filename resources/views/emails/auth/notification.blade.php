@@ -10,7 +10,7 @@
         <br>
         Login Details:
         <br>
-        - Device Vendor: {{ $device }}
+        - Device Vendor: {{ $vendor }}
         - Device Model: {{ $model }}
         <br>
         If this was you, no action is needed.
