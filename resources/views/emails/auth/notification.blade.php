@@ -8,10 +8,11 @@
         <br><br>
         We've detected a login to your account from a device we don't recognize.
         <br>
-        Login Details:
+        <b>Login Details:</b>
         <br>
-        - Device Vendor: {{ $vendor }}
-        - Device Model: {{ $model }}
+        - <b>Device Vendor:</b> {{ $vendor }}
+        <br>
+        - <b>Device Model:</b> {{ $model }}
         <br>
         If this was you, no action is needed.
         <br>
